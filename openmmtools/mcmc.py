@@ -724,7 +724,6 @@ class BaseIntegratorMove(MCMCMove):
         sampler_state.update_from_context(context, ignore_positions=True, ignore_velocities=True,
                                           ignore_collective_variables=False)
         timer.stop("{}: update sampler state".format(move_name))
-
         #timer.report_timing()
 
     @abc.abstractmethod
@@ -1527,9 +1526,11 @@ class HMCMove(BaseIntegratorMove):
 
     """
 
-    def __init__(self, timestep=1.0*unit.femtosecond, n_steps=1000, **kwargs):
+    def __init__(self, timestep=1.0*unit.femtosecond, n_steps=1000, md_steps=None, **kwargs):
+
         super(HMCMove, self).__init__(n_steps=n_steps, **kwargs)
         self.timestep = timestep
+        self.md_steps = n_steps if md_steps is None else md_steps
 
     def apply(self, thermodynamic_state, sampler_state):
         """Apply the MCMC move.
@@ -1550,16 +1551,18 @@ class HMCMove(BaseIntegratorMove):
     def __getstate__(self):
         serialization = super(HMCMove, self).__getstate__()
         serialization['timestep'] = self.timestep
+        serialization['md_steps'] = self.md_steps
         return serialization
 
     def __setstate__(self, serialization):
         super(HMCMove, self).__setstate__(serialization)
         self.timestep = serialization['timestep']
+        self.md_steps = serialization['md_steps']
 
     def _get_integrator(self, thermodynamic_state):
         """Implement BaseIntegratorMove._get_integrator()."""
         return integrators.HMCIntegrator(temperature=thermodynamic_state.temperature,
-                                         timestep=self.timestep, nsteps=self.n_steps)
+                                         timestep=self.timestep, nsteps=self.md_steps)
 
 
 # =============================================================================

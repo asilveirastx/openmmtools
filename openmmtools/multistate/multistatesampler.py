@@ -135,7 +135,7 @@ class MultiStateSampler(object):
     # Constructors.
     # -------------------------------------------------------------------------
 
-    def __init__(self, mcmc_moves=None, number_of_iterations=1, moves_per_iteration=1,
+    def __init__(self, mcmc_moves=None, number_of_iterations=1,
                  online_analysis_interval=200, online_analysis_target_error=0.0,
                  online_analysis_minimum_iterations=200,
                  locality=None):
@@ -167,12 +167,10 @@ class MultiStateSampler(object):
                                                                  n_restart_attempts=6)
         else:
             self._mcmc_moves = copy.deepcopy(mcmc_moves)
-
         # Store constructor parameters. Everything is marked for internal
         # usage because any change to these attribute implies a change
         # in the storage file as well. Use properties for checks.
         self.number_of_iterations = number_of_iterations
-        self.moves_per_iteration = moves_per_iteration
 
         # Store locality
         self.locality = locality
@@ -1220,21 +1218,19 @@ class MultiStateSampler(object):
         sampler_state = self._sampler_states[replica_id]
 
         # Apply MCMC move.
-        for move in range(self.moves_per_iterations):
-            try:
-                mcmc_move.apply(thermodynamic_state, sampler_state)
-            except mcmc.IntegratorMoveError as e:
-                # Save NaNnig context and MCMove before aborting.
-                output_dir = os.path.join(os.path.dirname(self._reporter.filepath), 'nan-error-logs')
-                file_name = 'iteration{}-replica{}-state{}'.format(self._iteration, replica_id,
+        try:
+            mcmc_move.apply(thermodynamic_state, sampler_state)
+        except mcmc.IntegratorMoveError as e:
+            # Save NaNnig context and MCMove before aborting.
+            output_dir = os.path.join(os.path.dirname(self._reporter.filepath), 'nan-error-logs')
+            file_name = 'iteration{}-replica{}-state{}'.format(self._iteration, replica_id,
                                                                thermodynamic_state_id)
-                e.serialize_error(os.path.join(output_dir, file_name))
-                message = ('Propagating replica {} at state {} resulted in a NaN!\n'
-                           'The state of the system and integrator before the error were saved'
-                           ' in {}').format(replica_id, thermodynamic_state_id, output_dir)
-                logger.critical(message)
-                raise SimulationNaNError(message)
-
+            e.serialize_error(os.path.join(output_dir, file_name))
+            message = ('Propagating replica {} at state {} resulted in a NaN!\n'
+                       'The state of the system and integrator before the error were saved'
+                       ' in {}').format(replica_id, thermodynamic_state_id, output_dir)
+            logger.critical(message)
+            raise SimulationNaNError(message)
         # Send the new state to the root node. We can ignore velocities as we're not saving them.
         return sampler_state.__getstate__(ignore_velocities=True)
 
